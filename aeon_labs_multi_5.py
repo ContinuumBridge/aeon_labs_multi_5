@@ -159,12 +159,15 @@ class Adaptor(CbAdaptor):
                     if message["data"]["name"] == "1":
                         temperature = message["data"]["val"]["value"] 
                         logging.debug("%s %s onZwaveMessage, temperature: %s", ModuleName, self.id, str(temperature))
+                        self.sendParameter("temperature", temperature, time.time())
                     elif message["data"]["name"] == "3":
                         luminescence = message["data"]["val"]["value"] 
                         logging.debug("%s %s onZwaveMessage, luminescence: %s", ModuleName, self.id, str(luminescence))
+                        self.sendParameter("luminescence", luminescence, time.time())
                     elif message["data"]["name"] == "5":
                         humidity = message["data"]["val"]["value"] 
                         logging.debug("%s %s onZwaveMessage, humidity: %s", ModuleName, self.id, str(humidity))
+                        self.sendParameter("humidity", humidity, time.time())
                 elif message["commandClass"] == "48":
                     if message["data"]["name"] == "1":
                         triggered = message["data"]["level"]["value"] 
@@ -186,7 +189,7 @@ class Adaptor(CbAdaptor):
         self.setState("running")
 
     def onAppRequest(self, message):
-        #logging.debug("%s %s %s onAppRequest, message = %s", ModuleName, self.id, self.friendly_name, message)
+        logging.debug("%s %s %s onAppRequest, message = %s", ModuleName, self.id, self.friendly_name, message)
         # Switch off anything that already exists for this app
         for a in self.apps:
             if message["id"] in self.apps[a]:
@@ -195,7 +198,7 @@ class Adaptor(CbAdaptor):
         for f in message["functions"]:
             if message["id"] not in self.apps[f["parameter"]]:
                 self.apps[f["parameter"]].append(message["id"])
-        #logging.debug("%s %s %s apps: %s", ModuleName, self.id, self.friendly_name, str(self.apps))
+        logging.debug("%s %s %s apps: %s", ModuleName, self.id, self.friendly_name, str(self.apps))
 
     def onAppCommand(self, message):
         logging.debug("%s %s %s onAppCommand, req = %s", ModuleName, self.id, self.friendly_name, message)
