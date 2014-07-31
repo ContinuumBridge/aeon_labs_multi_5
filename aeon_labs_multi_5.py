@@ -5,8 +5,9 @@
 # Proprietary and confidential
 # Written by Peter Claydon
 #
-ModuleName              = "aeon_labs_multi_5"
+ModuleName               = "aeon_labs_multi_5"
 BATTERY_CHECK_INTERVAL   = 300      # How often to check battery (secs)
+SENSOR_POLL_INTERVAL     = 180      # How often to request sensor values
 
 import sys
 import time
@@ -23,7 +24,10 @@ class Adaptor(CbAdaptor):
         logging.basicConfig(filename=CB_LOGFILE,level=CB_LOGGING_LEVEL,format='%(asctime)s %(message)s')
         self.status =           "ok"
         self.state =            "stopped"
-        self.apps =             {"binary_sensor": []}
+        self.apps =             {"binary_sensor": [],
+                                 "temperature": [],
+                                 "humidity": [],
+                                 "luminescence": []}
         # super's __init__ must be called:
         #super(Adaptor, self).__init__(argv)
         CbAdaptor.__init__(self, argv)
@@ -82,6 +86,18 @@ class Adaptor(CbAdaptor):
         self.sendZwaveMessage(cmd)
         reactor.callLater(BATTERY_CHECK_INTERVAL, self.checkBattery)
 
+    def pollSensors(self):
+        cmd = {"id": self.id,
+               "request": "post",
+               "address": self.addr,
+               "instance": "0",
+               "commandClass": "49",
+               "action": "Get",
+               "value": ""
+              }
+        self.sendZwaveMessage(cmd)
+        reactor.callLater(SENSOR_POLL_INTERVAL, self.pollSensors)
+
     def onOff(self, boolean):
         if boolean:
             return "on"
@@ -99,6 +115,33 @@ class Adaptor(CbAdaptor):
                    "value": "1"
                   }
             self.sendZwaveMessage(cmd)
+            # Temperature
+            cmd = {"id": self.id,
+                   "request": "get",
+                   "address": self.addr,
+                   "instance": "0",
+                   "commandClass": "49",
+                   "value": "1"
+                  }
+            self.sendZwaveMessage(cmd)
+            # Luminescence
+            cmd = {"id": self.id,
+                   "request": "get",
+                   "address": self.addr,
+                   "instance": "0",
+                   "commandClass": "49",
+                   "value": "3"
+                  }
+            self.sendZwaveMessage(cmd)
+            # Humidity
+            cmd = {"id": self.id,
+                   "request": "get",
+                   "address": self.addr,
+                   "instance": "0",
+                   "commandClass": "49",
+                   "value": "5"
+                  }
+            self.sendZwaveMessage(cmd)
             cmd = {"id": self.id,
                    "request": "get",
                    "address": self.addr,
@@ -107,22 +150,37 @@ class Adaptor(CbAdaptor):
                    "value": "1"
                   }
             self.sendZwaveMessage(cmd)
-            reactor.callLater(10, self.checkBattery)
-        elif message["content"] == "parameter":
-            try:
-                level = message["data"]["level"]["value"]
-                logging.debug("%s %s onZwaveMessage, level: %s", ModuleName, self.id, level)
-                self.sendParameter("binary_sensor", self.onOff(level), time.time())
-
-            except:
-                logging.debug("%s %s onZwaveMessage, no level", ModuleName, self.id)
+            reactor.callLater(20, self.checkBattery)
+            reactor.callLater(30, self.pollSensors)
+        elif message["content"] == "data":
+            #try:
+            if True:
+                if message["commandClass"] == "49":
+                    if message["data"]["name"] == "1":
+                        temperature = message["data"]["val"]["value"] 
+                        logging.debug("%s %s onZwaveMessage, temperature: %s", ModuleName, self.id, str(temperature))
+                    elif message["data"]["name"] == "3":
+                        luminescence = message["data"]["val"]["value"] 
+                        logging.debug("%s %s onZwaveMessage, luminescence: %s", ModuleName, self.id, str(luminescence))
+                    elif message["data"]["name"] == "5":
+                        humidity = message["data"]["val"]["value"] 
+                        logging.debug("%s %s onZwaveMessage, humidity: %s", ModuleName, self.id, str(humidity))
+                elif message["commandClass"] == "48":
+                    if message["data"]["name"] == "1":
+                        triggered = message["data"]["level"]["value"] 
+                        logging.debug("%s %s onZwaveMessage, triggered: %s", ModuleName, self.id, str(triggered))
+            #except:
+            #    logging.debug("%s %s onZwaveMessage, no data-val-value", ModuleName, self.id)
 
     def onAppInit(self, message):
         logging.debug("%s %s %s onAppInit, req = %s", ModuleName, self.id, self.friendly_name, message)
         resp = {"name": self.name,
                 "id": self.id,
                 "status": "ok",
-                "functions": [{"parameter": "binary_sensor"}],
+                "functions": [{"parameter": "binary_sensor"},
+                              {"parameter": "temperature"},
+                              {"parameter": "luminescence"},
+                              {"parameter": "humidity"}],
                 "content": "functions"}
         self.sendMessage(resp, message["id"])
         self.setState("running")
