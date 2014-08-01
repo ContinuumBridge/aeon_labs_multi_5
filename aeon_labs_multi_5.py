@@ -170,8 +170,12 @@ class Adaptor(CbAdaptor):
                         self.sendParameter("humidity", humidity, time.time())
                 elif message["commandClass"] == "48":
                     if message["data"]["name"] == "1":
-                        triggered = message["data"]["level"]["value"] 
-                        logging.debug("%s %s onZwaveMessage, triggered: %s", ModuleName, self.id, str(triggered))
+                        if message["data"]["level"]["value"]:
+                            b = "on"
+                        else:
+                            b = "off"
+                        logging.debug("%s %s onZwaveMessage, alarm: %s", ModuleName, self.id, b)
+                        self.sendParameter("binary_sensor", b, time.time())
             #except:
             #    logging.debug("%s %s onZwaveMessage, no data-val-value", ModuleName, self.id)
 
