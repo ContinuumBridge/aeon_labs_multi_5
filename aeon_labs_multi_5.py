@@ -6,5 +6,5 @@
 # Written by Peter Claydon
 #
 import sys
-from aeon_labs_multi_5_a import adaptor
+from aeon_labs_multi_5_a import Adaptor
 Adaptor(sys.argv)
