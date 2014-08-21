@@ -44,12 +44,13 @@ class Adaptor(CbAdaptor):
                "state": self.state}
         self.sendManagerMessage(msg)
 
-    def sendParameter(self, parameter, data, timeStamp):
+    def sendcharacteristic(self, characteristic, data, timeStamp):
         msg = {"id": self.id,
-               "content": parameter,
+               "content": "characteristic",
+               "characteristic": characteristic,
                "data": data,
                "timeStamp": timeStamp}
-        for a in self.apps[parameter]:
+        for a in self.apps[characteristic]:
             self.sendMessage(msg, a)
 
     def checkBattery(self):
@@ -140,15 +141,15 @@ class Adaptor(CbAdaptor):
                     if message["data"]["name"] == "1":
                         temperature = message["data"]["val"]["value"] 
                         #logging.debug("%s %s onZwaveMessage, temperature: %s", ModuleName, self.id, str(temperature))
-                        self.sendParameter("temperature", temperature, time.time())
+                        self.sendcharacteristic("temperature", temperature, time.time())
                     elif message["data"]["name"] == "3":
                         luminance = message["data"]["val"]["value"] 
                         #logging.debug("%s %s onZwaveMessage, luminance: %s", ModuleName, self.id, str(luminance))
-                        self.sendParameter("luminance", luminance, time.time())
+                        self.sendcharacteristic("luminance", luminance, time.time())
                     elif message["data"]["name"] == "5":
                         humidity = message["data"]["val"]["value"] 
                         #logging.debug("%s %s onZwaveMessage, humidity: %s", ModuleName, self.id, str(humidity))
-                        self.sendParameter("humidity", humidity, time.time())
+                        self.sendcharacteristic("humidity", humidity, time.time())
                 elif message["commandClass"] == "48":
                     if message["data"]["name"] == "1":
                         if message["data"]["level"]["value"]:
@@ -156,7 +157,7 @@ class Adaptor(CbAdaptor):
                         else:
                             b = "off"
                         logging.debug("%s %s onZwaveMessage, alarm: %s", ModuleName, self.id, b)
-                        self.sendParameter("binary_sensor", b, time.time())
+                        self.sendcharacteristic("binary_sensor", b, time.time())
                 elif message["commandClass"] == "128":
                      #logging.debug("%s %s onZwaveMessage, battery message: %s", ModuleName, self.id, str(message))
                      battery = message["data"]["last"]["value"] 
@@ -173,11 +174,11 @@ class Adaptor(CbAdaptor):
         resp = {"name": self.name,
                 "id": self.id,
                 "status": "ok",
-                "functions": [{"parameter": "binary_sensor", "interval": 0},
-                              {"parameter": "temperature", "interval": 300},
-                              {"parameter": "luminance", "interval": 300},
-                              {"parameter": "humidity", "interval": 300}],
-                "content": "functions"}
+                "service": [{"characteristic": "binary_sensor", "interval": 0},
+                            {"characteristic": "temperature", "interval": 300},
+                            {"characteristic": "luminance", "interval": 300},
+                            {"characteristic": "humidity", "interval": 300}],
+                "content": "service"}
         self.sendMessage(resp, message["id"])
         self.setState("running")
 
@@ -188,9 +189,9 @@ class Adaptor(CbAdaptor):
             if message["id"] in self.apps[a]:
                 self.apps[a].remove(message["id"])
         # Now update details based on the message
-        for f in message["functions"]:
-            if message["id"] not in self.apps[f["parameter"]]:
-                self.apps[f["parameter"]].append(message["id"])
+        for f in message["service"]:
+            if message["id"] not in self.apps[f["characteristic"]]:
+                self.apps[f["characteristic"]].append(message["id"])
         logging.debug("%s %s %s apps: %s", ModuleName, self.id, self.friendly_name, str(self.apps))
 
     def onAppCommand(self, message):
