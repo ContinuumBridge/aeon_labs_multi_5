@@ -1,0 +1,11 @@
+{
+    "exe": "aeon_labs_multi_5.py", 
+    "protocol": "zwave", 
+    "name": "Aeon Labs 5 2", 
+    "device_resource": "/api/bridge/v1/device/36/", 
+    "url": "https://github.com/ContinuumBridge/aeon_labs_multi_5/archive/v0.2.4.tar.gz", 
+    "version": "0.2.4", 
+    "provider": "ContinuumBridge", 
+    "adaptor_resource": "/api/bridge/v1/adaptor/30/", 
+    "description": "Aeon Labs Multisensor"
+}
