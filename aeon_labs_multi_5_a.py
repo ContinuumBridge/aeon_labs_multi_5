@@ -6,8 +6,8 @@
 # Written by Peter Claydon
 #
 ModuleName               = "aeon_labs_multi_5"
-BATTERY_CHECK_INTERVAL   = 600      # How often to check battery (secs)
-SENSOR_POLL_INTERVAL     = 300      # How often to request sensor values
+BATTERY_CHECK_INTERVAL   = 21600    # How often to check battery (secs) - 6 hours
+SENSOR_POLL_INTERVAL     = 600      # How often to request sensor values
 
 import sys
 import time
@@ -25,6 +25,8 @@ class Adaptor(CbAdaptor):
         self.status =           "ok"
         self.state =            "stopped"
         self.apps =             {"binary_sensor": [],
+                                 "battery": [],
+                                 "temperature": [],
                                  "temperature": [],
                                  "humidity": [],
                                  "luminance": []}
@@ -166,6 +168,7 @@ class Adaptor(CbAdaptor):
                             "status": "battery_level",
                             "battery_level": battery}
                      self.sendManagerMessage(msg)
+                     self.sendcharacteristic("battery", battery, time.time())
             except:
                 logging.warning("%s %s onZwaveMessage, unexpected message", ModuleName, str(message))
 
@@ -175,9 +178,10 @@ class Adaptor(CbAdaptor):
                 "id": self.id,
                 "status": "ok",
                 "service": [{"characteristic": "binary_sensor", "interval": 0},
-                            {"characteristic": "temperature", "interval": 300},
-                            {"characteristic": "luminance", "interval": 300},
-                            {"characteristic": "humidity", "interval": 300}],
+                            {"characteristic": "temperature", "interval": SENSOR_POLL_INTERVAL},
+                            {"characteristic": "luminance", "interval": SENSOR_POLL_INTERVAL},
+                            {"characteristic": "humidity", "interval": SENSOR_POLL_INTERVAL},
+                            {"characteristic": "battery", "interval": BATTERY_CHECK_INTERVAL}],
                 "content": "service"}
         self.sendMessage(resp, message["id"])
         self.setState("running")
