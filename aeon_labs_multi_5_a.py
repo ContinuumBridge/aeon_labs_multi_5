@@ -140,20 +140,20 @@ class Adaptor(CbAdaptor):
         elif message["content"] == "data":
             try:
                 if message["commandClass"] == "49":
-                    if message["data"]["name"] == "1":
+                    if message["value"] == "1":
                         temperature = message["data"]["val"]["value"] 
                         #logging.debug("%s %s onZwaveMessage, temperature: %s", ModuleName, self.id, str(temperature))
                         self.sendcharacteristic("temperature", temperature, time.time())
-                    elif message["data"]["name"] == "3":
+                    elif message["value"] == "3":
                         luminance = message["data"]["val"]["value"] 
                         #logging.debug("%s %s onZwaveMessage, luminance: %s", ModuleName, self.id, str(luminance))
                         self.sendcharacteristic("luminance", luminance, time.time())
-                    elif message["data"]["name"] == "5":
+                    elif message["value"] == "5":
                         humidity = message["data"]["val"]["value"] 
                         #logging.debug("%s %s onZwaveMessage, humidity: %s", ModuleName, self.id, str(humidity))
                         self.sendcharacteristic("humidity", humidity, time.time())
                 elif message["commandClass"] == "48":
-                    if message["data"]["name"] == "1":
+                    if message["value"] == "1":
                         if message["data"]["level"]["value"]:
                             b = "on"
                         else:
