@@ -140,15 +140,19 @@ class Adaptor(CbAdaptor):
                     if message["value"] == "1":
                         temperature = message["data"]["val"]["value"] 
                         self.cbLog("debug", "onZwaveMessage, temperature: " + str(temperature))
-                        self.sendcharacteristic("temperature", temperature, time.time())
+                        self.cbLog("debug", "onZwaveMessage, temperature type: " + str(temperature.__class__.__name__))
+                        if temperature is not None:
+                            self.sendcharacteristic("temperature", temperature, time.time())
                     elif message["value"] == "3":
                         luminance = message["data"]["val"]["value"] 
                         self.cbLog("debug", "onZwaveMessage, luminance: " + str(luminance))
-                        self.sendcharacteristic("luminance", luminance, time.time())
+                        if luminance is not None:
+                            self.sendcharacteristic("luminance", luminance, time.time())
                     elif message["value"] == "5":
                         humidity = message["data"]["val"]["value"] 
                         self.cbLog("debug", "onZwaveMessage, humidity: " + str(humidity))
-                        self.sendcharacteristic("humidity", humidity, time.time())
+                        if humidity is not None:
+                            self.sendcharacteristic("humidity", humidity, time.time())
                 elif message["commandClass"] == "48":
                     if message["value"] == "1":
                         if message["data"]["level"]["value"]:
@@ -167,7 +171,7 @@ class Adaptor(CbAdaptor):
                      self.sendcharacteristic("battery", battery, time.time())
             except Exception as ex:
                 self.cbLog("warning", "onZwaveMessage, unexpected message: " + str(message))
-                self.cbLog("warning", "Exception: ", str(type(ex)), str(ex.args))
+                self.cbLog("warning", "Exception: " + str(type(ex)) + str(ex.args))
 
     def onAppInit(self, message):
         self.cbLog("debug", "onAppInit, req = " + str(message))
