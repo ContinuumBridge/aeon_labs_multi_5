@@ -123,6 +123,16 @@ class Adaptor(CbAdaptor):
                    "commandClass": "128"
                   }
             self.sendZwaveMessage(cmd)
+            # Associate PIR alarm with this controller
+            cmd = {"id": self.id,
+                   "request": "post",
+                   "address": self.addr,
+                   "instance": "0",
+                   "commandClass": "133",
+                   "action": "Set",
+                   "value": "1,1"
+                  }
+            self.sendZwaveMessage(cmd)
             # 8 s timeout period of no-motion detected before the Multisensor sends the OFF state after being triggered.
             cmd = {"id": self.id,
                    "request": "post",
