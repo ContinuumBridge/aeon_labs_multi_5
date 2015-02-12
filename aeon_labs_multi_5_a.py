@@ -7,7 +7,7 @@
 #
 ModuleName               = "aeon_labs_multi_5"
 BATTERY_CHECK_INTERVAL   = 21600    # How often to check battery (secs) - 6 hours
-SENSOR_POLL_INTERVAL     = 600      # How often to request sensor values
+SENSOR_POLL_INTERVAL     = 300      # How often to request sensor values
 
 import sys
 import time
@@ -65,6 +65,7 @@ class Adaptor(CbAdaptor):
         reactor.callLater(BATTERY_CHECK_INTERVAL, self.checkBattery)
 
     def pollSensors(self):
+        self.cbLog("debug", "pollSensors")
         cmd = {"id": self.id,
                "request": "post",
                "address": self.addr,
@@ -77,7 +78,7 @@ class Adaptor(CbAdaptor):
         reactor.callLater(SENSOR_POLL_INTERVAL, self.pollSensors)
 
     def onZwaveMessage(self, message):
-        #self.cbLog("debug", "onZwaveMessage, message: " + str(message))
+        self.cbLog("debug", "onZwaveMessage, message: " + str(message))
         if message["content"] == "init":
             cmd = {"id": self.id,
                    "request": "get",
@@ -140,7 +141,6 @@ class Adaptor(CbAdaptor):
                     if message["value"] == "1":
                         temperature = message["data"]["val"]["value"] 
                         self.cbLog("debug", "onZwaveMessage, temperature: " + str(temperature))
-                        self.cbLog("debug", "onZwaveMessage, temperature type: " + str(temperature.__class__.__name__))
                         if temperature is not None:
                             self.sendcharacteristic("temperature", temperature, time.time())
                     elif message["value"] == "3":
