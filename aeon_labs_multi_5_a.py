@@ -7,7 +7,7 @@
 #
 ModuleName               = "aeon_labs_multi_5"
 BATTERY_CHECK_INTERVAL   = 21600    # How often to check battery (secs) - 6 hours
-SENSOR_POLL_INTERVAL     = 300      # How often to request sensor values
+SENSOR_POLL_INTERVAL     = 450      # How often to request sensor values
 
 import sys
 import time
@@ -78,7 +78,7 @@ class Adaptor(CbAdaptor):
         reactor.callLater(SENSOR_POLL_INTERVAL, self.pollSensors)
 
     def onZwaveMessage(self, message):
-        self.cbLog("debug", "onZwaveMessage, message: " + str(message))
+        #self.cbLog("debug", "onZwaveMessage, message: " + str(message))
         if message["content"] == "init":
             cmd = {"id": self.id,
                    "request": "get",
