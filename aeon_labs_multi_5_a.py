@@ -75,7 +75,7 @@ class Adaptor(CbAdaptor):
                "value": ""
               }
         self.sendZwaveMessage(cmd)
-        #reactor.callLater(SENSOR_POLL_INTERVAL, self.pollSensors)
+        reactor.callLater(SENSOR_POLL_INTERVAL, self.pollSensors)
 
     def onZwaveMessage(self, message):
         #self.cbLog("debug", "onZwaveMessage, message: " + str(message))
@@ -123,7 +123,17 @@ class Adaptor(CbAdaptor):
                    "commandClass": "128"
                   }
             self.sendZwaveMessage(cmd)
-            # Associate PIR alarm with this controller
+            # Set wakeup time to 180 secs
+            cmd = {"id": self.id,
+                   "request": "post",
+                   "address": self.addr,
+                   "instance": "0",
+                   "commandClass": "132",
+                   "action": "Set",
+                   "value": "180,1"
+                  }
+            self.sendZwaveMessage(cmd)
+            # Associate with this controller
             cmd = {"id": self.id,
                    "request": "post",
                    "address": self.addr,
