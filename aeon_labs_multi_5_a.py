@@ -75,7 +75,7 @@ class Adaptor(CbAdaptor):
                "value": ""
               }
         self.sendZwaveMessage(cmd)
-        reactor.callLater(SENSOR_POLL_INTERVAL, self.pollSensors)
+        #reactor.callLater(SENSOR_POLL_INTERVAL, self.pollSensors)
 
     def onZwaveMessage(self, message):
         #self.cbLog("debug", "onZwaveMessage, message: " + str(message))
