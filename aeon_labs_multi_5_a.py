@@ -48,6 +48,8 @@ class Adaptor(CbAdaptor):
             self.state == "error"
         elif action == "clear_error":
             self.state = "running"
+        else:
+            self.state = action
         msg = {"id": self.id,
                "status": "state",
                "state": self.state}
@@ -220,7 +222,7 @@ class Adaptor(CbAdaptor):
         resp = {"name": self.name,
                 "id": self.id,
                 "status": "ok",
-                "service": [{"characteristic": "binary_sensor", "interval": 0},
+                "service": [{"characteristic": "binary_sensor", "interval": 0, "type": "pir"},
                             {"characteristic": "temperature", "interval": MIN_INTERVAL},
                             {"characteristic": "luminance", "interval": MIN_INTERVAL},
                             {"characteristic": "humidity", "interval": MIN_INTERVAL},
