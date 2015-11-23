@@ -5,10 +5,10 @@
 # Proprietary and confidential
 # Written by Peter Claydon
 #
-ModuleName               = "aeon_labs_multi_5"
 BATTERY_CHECK_INTERVAL   = 21600    # How often to check battery (secs) - 6 hours
 MAX_INTERVAL             = 60*60
 MIN_INTERVAL             = 300
+TIME_CUTOFF              = 1800     # Data older than this is considered "stale"
 
 import sys
 import time
@@ -26,17 +26,25 @@ class Adaptor(CbAdaptor):
         self.state =            "stopped"
         self.apps =             {"binary_sensor": [],
                                  "battery": [],
+                                 "connected": [],
                                  "temperature": [],
                                  "humidity": [],
                                  "luminance": []}
         self.intervals = {
             "binary_sensor": MAX_INTERVAL,
             "battery": BATTERY_CHECK_INTERVAL,
+            "connected": BATTERY_CHECK_INTERVAL,
             "temperature": MAX_INTERVAL,
             "humidity": MAX_INTERVAL,
             "luminance": MAX_INTERVAL
         }
+        self.lastTemperatureTime =   0
+        self.lastHumidityTime =      0
+        self.lastLuminanceTime =     0
+        self.lastBinaryTime =        0
+        self.lastBatteryTime =       0
         self.intervalChanged = False
+        self.lastUpdateTime = 0
         self.pollInterval = MIN_INTERVAL - 1 # Start with a short poll interval when no apps have requested
         # super's __init__ must be called:
         #super(Adaptor, self).__init__(argv)
@@ -55,7 +63,7 @@ class Adaptor(CbAdaptor):
                "state": self.state}
         self.sendManagerMessage(msg)
 
-    def sendcharacteristic(self, characteristic, data, timeStamp):
+    def sendCharacteristic(self, characteristic, data, timeStamp):
         msg = {"id": self.id,
                "content": "characteristic",
                "characteristic": characteristic,
@@ -63,6 +71,16 @@ class Adaptor(CbAdaptor):
                "timeStamp": timeStamp}
         for a in self.apps[characteristic]:
             self.sendMessage(msg, a)
+
+    def checkConnected(self):
+        self.cbLog("debug", "checkConnected, updateTime: " + str(self.updateTime) + ", lastUpdateTime: " + str(self.lastUpdateTime))
+        if self.updateTime == self.lastUpdateTime:
+            self.connected = False
+        else:
+            self.connected = True
+        self.sendCharacteristic("connected", self.connected, time.time())
+        self.lastUpdateTime = self.updateTime
+        self.checkID = reactor.callLater(self.pollInterval * 3, self.checkConnected)
 
     def checkBattery(self):
         cmd = {"id": self.id,
@@ -77,7 +95,7 @@ class Adaptor(CbAdaptor):
         reactor.callLater(BATTERY_CHECK_INTERVAL, self.checkBattery)
 
     def pollSensors(self):
-        self.cbLog("debug", "pollSensors")
+        #self.cbLog("debug", "pollSensors")
         if self.intervalChanged:
             self.intervalChanged = False
             # Set wakeup time
@@ -104,6 +122,8 @@ class Adaptor(CbAdaptor):
     def onZwaveMessage(self, message):
         #self.cbLog("debug", "onZwaveMessage, message: " + str(message))
         if message["content"] == "init":
+            self.updateTime = time.time()
+            self.lastUpdateTime = self.updateTime
             cmd = {"id": self.id,
                    "request": "get",
                    "address": self.addr,
@@ -179,40 +199,60 @@ class Adaptor(CbAdaptor):
             self.sendZwaveMessage(cmd)
             reactor.callLater(10, self.checkBattery)
             reactor.callLater(10, self.pollSensors)
+            self.checkID = reactor.callLater(self.pollInterval*2, self.checkConnected)
         elif message["content"] == "data":
             try:
                 if message["commandClass"] == "49":
                     if message["value"] == "1":
                         temperature = message["data"]["val"]["value"] 
-                        self.cbLog("debug", "onZwaveMessage, temperature: " + str(temperature))
-                        if temperature is not None:
-                            self.sendcharacteristic("temperature", temperature, time.time())
+                        updateTime = message["data"]["val"]["updateTime"] 
+                        if updateTime != self.lastTemperatureTime and time.time() - updateTime < TIME_CUTOFF:
+                            self.cbLog("debug", "onZwaveMessage, temperature: " + str(temperature))
+                            self.lastTemperatureTime = updateTime
+                            if temperature is not None:
+                                self.sendCharacteristic("temperature", temperature, time.time())
                     elif message["value"] == "3":
                         luminance = message["data"]["val"]["value"] 
-                        self.cbLog("debug", "onZwaveMessage, luminance: " + str(luminance))
-                        if luminance is not None:
-                            self.sendcharacteristic("luminance", luminance, time.time())
+                        updateTime = message["data"]["val"]["updateTime"] 
+                        if updateTime != self.lastLuminanceTime and time.time() - updateTime < TIME_CUTOFF:
+                            self.cbLog("debug", "onZwaveMessage, luminance: " + str(luminance))
+                            if luminance is not None:
+                                self.sendCharacteristic("luminance", luminance, time.time())
+                                self.lastLuminanceTime = updateTime
                     elif message["value"] == "5":
                         humidity = message["data"]["val"]["value"] 
-                        self.cbLog("debug", "onZwaveMessage, humidity: " + str(humidity))
-                        if humidity is not None:
-                            self.sendcharacteristic("humidity", humidity, time.time())
+                        updateTime = message["data"]["val"]["updateTime"] 
+                        if updateTime != self.lastHumidityTime and time.time() - updateTime < TIME_CUTOFF:
+                            self.cbLog("debug", "onZwaveMessage, humidity: " + str(humidity))
+                            if humidity is not None:
+                                self.sendCharacteristic("humidity", humidity, time.time())
+                                self.lastHumidityTime = updateTime
                 elif message["commandClass"] == "48":
                     if message["value"] == "1":
-                        if message["data"]["level"]["value"]:
-                            b = "on"
-                        else:
-                            b = "off"
-                        self.cbLog("debug", "onZwaveMessage, alarm: " + b)
-                        self.sendcharacteristic("binary_sensor", b, time.time())
+                        updateTime = message["data"]["level"]["updateTime"]
+                        if updateTime != self.lastBinaryTime and time.time() - updateTime < TIME_CUTOFF:
+                            if message["data"]["level"]["value"]:
+                                b = "on"
+                            else:
+                                b = "off"
+                            self.cbLog("debug", "onZwaveMessage, alarm: " + b)
+                            self.sendCharacteristic("binary_sensor", b, time.time())
+                            self.lastBinaryTime = updateTime
                 elif message["commandClass"] == "128":
-                     battery = message["data"]["last"]["value"] 
-                     self.cbLog("info", "battery level: " + str(battery))
-                     msg = {"id": self.id,
-                            "status": "battery_level",
-                            "battery_level": battery}
-                     self.sendManagerMessage(msg)
-                     self.sendcharacteristic("battery", battery, time.time())
+                    updateTime = message["data"]["last"]["updateTime"]
+                    if (updateTime != self.lastBatteryTime) and (time.time() - updateTime < TIME_CUTOFF):
+                        battery = message["data"]["last"]["value"] 
+                        self.cbLog("info", "battery level: " + str(battery))
+                        msg = {"id": self.id,
+                               "status": "battery_level",
+                               "battery_level": battery}
+                        self.sendManagerMessage(msg)
+                        self.sendCharacteristic("battery", battery, time.time())
+                        self.lastBatteryTime = updateTime
+                self.updateTime = message["data"]["updateTime"]
+                if self.updateTime != self.lastUpdateTime:
+                    self.checkID.cancel()  # Allows connected to be set to True immediately
+                    self.checkConnected()
             except Exception as ex:
                 self.cbLog("warning", "onZwaveMessage, unexpected message: " + str(message))
                 self.cbLog("warning", "Exception: " + str(type(ex)) + str(ex.args))
@@ -226,6 +266,7 @@ class Adaptor(CbAdaptor):
                             {"characteristic": "temperature", "interval": MIN_INTERVAL},
                             {"characteristic": "luminance", "interval": MIN_INTERVAL},
                             {"characteristic": "humidity", "interval": MIN_INTERVAL},
+                            {"characteristic": "connected", "interval": MIN_INTERVAL*2},
                             {"characteristic": "battery", "interval": BATTERY_CHECK_INTERVAL}],
                 "content": "service"}
         self.sendMessage(resp, message["id"])
@@ -241,7 +282,7 @@ class Adaptor(CbAdaptor):
         for f in message["service"]:
             if message["id"] not in self.apps[f["characteristic"]]:
                 self.apps[f["characteristic"]].append(message["id"])
-                if f["characteristic"] != "battery" and f["characteristic"] != "binary_sensor":
+                if f["characteristic"] != "battery" and f["characteristic"] != "binary_sensor" and f["characteristic"] != "connected":
                     if "interval" in f:
                         if f["interval"] <= MIN_INTERVAL:
                             self.intervals[f["characteristic"]] = MIN_INTERVAL
